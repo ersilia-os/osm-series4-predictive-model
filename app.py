@@ -21,14 +21,15 @@ from src.eosdescriptors.rdkit2d import Rdkit2d
 
 
 # APP:
+st.set_page_config(page_title=None, page_icon=None, layout='wide', initial_sidebar_state='auto')
 
-st.title("Properties calculation for OSM Series 4 molecules")
+st.title("OSM series 4 calculator")
 
 # First section: molecule input and drawing
 col1, col2 = st.beta_columns(2)
 #Input
-col1.subheader("Input molecule in SMILES format")
-smiles = col1.text_input("", value = "")
+col1.subheader("Input")
+smiles = col1.text_input("Input molecule in SMILES format.", value = "BrC(F)Oc1ccc(-c2nnc3cncc(CN4Cc5ccccc5C4)n23)cc1")
 if not smiles:
     mol = None
 else:
@@ -158,30 +159,30 @@ st.header("Property details")
 
 #activity
 st.subheader("Activity prediction")
-st.write("Average score across all predictors (3 classifiers and 3 regressors) +/- standard deviation. Individual scores are detailed in the Activity Predictions row")
+st.write("Average score across all predictors (3 classifiers and 3 regressors) +/- standard deviation. Individual scores are detailed in the Activity Predictions row.")
 st.text("Interpretation: 0 = no activity - 1 = maximum activity")
 
 #Molecular weight
 st.subheader("Molecular Weight")
-st.write("Calculation of the exact molecular weight using rdkit")
+st.write("Calculation of the exact molecular weight using Rdkit.")
 st.text("Interpretation: for series 4 molecules, MW should be around 450 Da")
 
 #Solubility
-st.subheader("Solubility")
-st.write("Octanol/water partition coefficient estimation (LogP) as a measure of the compound solubility using rdkit ")
+st.subheader("SLogP")
+st.write("Octanol/water partition coefficient estimation (LogP) as a measure of the molecule solubility using Rdkit.")
 st.text("Interpretation: smaller values = more solubility. For drug-like molecules should be LogP<4")
 
 #QED
 st.subheader("Quantitative Estimation of Drug-like (QED)")
-st.write("Estimation of the drug likeness using the QED score as calculated by rdkit")
+st.write("Estimation of the drug likeness using the QED score as calculated by Rdkit.")
 st.text("Interpretation: 0 = lowest probability of being a drug - 1 = highest probability of being a drug")
 
 #Series 4 similarity
 st.subheader("Series4 similarity")
-st.write("Maximum tanimoto similarity of the input molecule to the original series 4 molecules")
+st.write("Maximum tanimoto similarity of the input molecule to the original series 4 molecules.")
 st.text("Interpretation: 0 = completely different - 1 = very similar to existing molecules")
 
 #RA_score
 st.subheader("Retrosynthetic Accessibility (RA) score")
-st.write("Estimation of the synthetic feasibility for the input molecule as determined from the predictions of the computer aided synthesis planning tool AiZynthFinder. Developed by the [Reymond Group](https://github.com/reymond-group/RAscore)")
+st.write("Estimation of the synthetic feasibility for the input molecule as determined from the predictions of the computer aided synthesis planning tool AiZynthFinder. Developed by the [Reymond Group](https://github.com/reymond-group/RAscore).")
 st.text("Interpretation: 0 = no synthetic route identified - 1 = synthetic route available")

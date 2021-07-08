@@ -34,3 +34,30 @@ def get_fingerprints(smiles):
     mols = [Chem.MolFromSmiles(smi) for smi in smiles]
     fingerprinter = Ecfp()
     return fingerprinter.calc(mols)
+
+
+def mols_to_fingerprints(molecules, radius=3, useCounts=True, useFeatures=True):
+    fingerprints = [AllChem.GetMorganFingerprint(
+        mol,
+        radius,
+        useCounts=useCounts,
+        useFeatures=useFeatures
+    ) for mol in molecules]
+    return fingerprints
+
+def ra_fingerprint(mol):
+    """
+    Converts SMILES into a counted ECFP6 vector with features.
+    :param smiles: SMILES representation of the moelcule of interest
+    :type smiles: str
+    :return: ECFP6 counted vector with features
+    :rtype: np.array
+    """
+    fp = AllChem.GetMorganFingerprint(mol, 3, useCounts=True, useFeatures=False)
+    size = 2048
+    arr = np.zeros((size,), np.int32)
+    for idx, v in fp.GetNonzeroElements().items():
+        nidx = idx % size
+        arr[nidx] += int(v)
+    return arr
+    

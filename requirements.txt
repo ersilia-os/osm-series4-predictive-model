@@ -1,0 +1,6 @@
+streamlit
+rdkit-pypi
+opencv-python-headless
+onnxruntime
+scikit-learn
+joblib

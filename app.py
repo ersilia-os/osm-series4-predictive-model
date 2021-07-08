@@ -14,34 +14,56 @@ from rdkit.Chem.Descriptors import MolLogP
 from rdkit.Chem import Draw
 from rdkit.DataStructs import BulkTanimotoSimilarity
 
+import utils.SA_Score.sascorer as sascorer
 from src.fingerprinter import get_fingerprints, mols_to_fingerprints, ra_fingerprint
 from src.eosdescriptors.chembl import Chembl
 from src.eosdescriptors.ecfp import Ecfp
 from src.eosdescriptors.rdkit2d import Rdkit2d
+from src.eosdescriptors.rdkitfpbits import RdkitFpBits
 
 
 # APP:
 st.set_page_config(page_title=None, page_icon=None, layout='wide', initial_sidebar_state='auto')
 
 st.title("OSM series 4 calculator")
+st.write("See [GitHub Repo](https://github.com/ersilia-os/osm-series4-predictive-model) | Check GitHub OSM Issue [#34](https://github.com/OpenSourceMalaria/Series4_PredictiveModel/issues/34) | Learn about [Ersilia Open Source Initiative](https://ersilia.io)")
 
 # First section: molecule input and drawing
-col1, col2 = st.beta_columns(2)
-#Input
-col1.subheader("Input")
+col1, col2, col3 = st.beta_columns(3)
+# Input
+col1.subheader("Input SMILES")
 smiles = col1.text_input("Input molecule in SMILES format.", value = "BrC(F)Oc1ccc(-c2nnc3cncc(CN4Cc5ccccc5C4)n23)cc1")
 if not smiles:
     mol = None
 else:
     mol=Chem.MolFromSmiles(smiles)
-#Image
-col2.subheader("Molecule display")
+
+# Image
+col2.subheader("Input molecule")
 if mol is not None:
     col2.image(Draw.MolToImage(mol), width=200)
 
+# Closest molecule
+col3.subheader("Closest known S4")
+df = pd.read_csv("data/series4_processed.csv") #get series4 molecules for tanimoto similarity
+s4_smiles = df["smiles"].tolist()
+s4_mols = [Chem.MolFromSmiles(smi) for smi in s4_smiles]
+s4_osm = df["osm"].tolist()
+ref_fps=mols_to_fingerprints(s4_mols)
+if mol is None:
+    pass
+else:
+    query_fp = mols_to_fingerprints([mol])
+    fp = query_fp[0]
+    bulk_sims = BulkTanimotoSimilarity(fp, ref_fps)
+    idx = np.argmax(bulk_sims)
+    s4_mol = s4_mols[idx]
+    col3.image(Draw.MolToImage(s4_mol), width=200)
+    col3.text(s4_osm[idx])
+
 # Second section: prediction of properties
 st.header("Properties")
-col1, col2, col3, col4, col5, col6 =st.beta_columns(6)
+col1, col2, col3, col4, col5, col6, col7, col8 = st.beta_columns(8)
 
 col1.subheader("Activity")
 MODELS_DIR = "model"
@@ -63,7 +85,8 @@ necessary_tasks = sorted(set([k[1] for k in all_models]))
 descriptor_calculators = {
     "chembl": Chembl(),
     "ecfp": Ecfp(),
-    "rdkit2d": Rdkit2d()
+    "rdkit2d": Rdkit2d(),
+    "rdkitfpbits": RdkitFpBits()
 }
 
 def one_prediction(mol):
@@ -122,11 +145,10 @@ ref_fps=mols_to_fingerprints(s4_mols)
 if mol is None:
     tan=0
 else:
-    query_fp = mols_to_fingerprints([mol])
-    tan=np.array([np.max(BulkTanimotoSimilarity(fp, ref_fps)) for fp in query_fp])[0]
+    tan=np.max(bulk_sims)
 col5.write("{0:.2f}".format(tan))
 
-col6.subheader("RAscore")
+col6.subheader("RA score")
 if mol is None:
     ra=0
 else:
@@ -138,16 +160,36 @@ else:
     ra = sess.run([label_name], {input_name: ra_fp})[0][0][1]
 col6.write("{0:.2f}".format(ra))
 
+col7.subheader("SA score")
+if mol is None:
+    sa=0
+else:
+    sa = sascorer.calculateScore(mol)
+col7.write("{0:.2f}".format(sa))
+
+col8.subheader("HDB & HDA")
+if mol is None:
+    comp = 0
+else:
+    HDonorSmarts = Chem.MolFromSmarts('[$([N;!H0;v3]),$([N;!H0;+1;v4]),$([O,S;H1;+0]),$([n;H1;+0])]')
+    HAcceptorSmarts = Chem.MolFromSmarts('[$([O,S;H1;v2]-[!$(*=[O,N,P,S])]),' +
+                                         '$([O,S;H0;v2]),$([O,S;-]),$([N;v3;!$(N-*=!@[O,N,P,S])]),' +
+                                         '$([nH0,o,s;+0])]')
+    def count_hbd_hba_atoms(m):
+        HDonor = m.GetSubstructMatches(HDonorSmarts)
+        HAcceptor = m.GetSubstructMatches(HAcceptorSmarts)
+        return len(set(HDonor + HAcceptor))
+    comp = count_hbd_hba_atoms(mol)
+    col8.write("{0}".format(comp))
+
 # Third section: individual activity predictions
 
 if mol is not None:
     st.header("Activity Predictions")
-    col1, col2, col3, col4, col5, col6 =st.beta_columns(6)
-    the_cols = [col1, col2, col3, col4, col5, col6]
-
+    the_cols = st.beta_columns(8)
     i = 0
     for task in ["classification", "regression"]:
-       for n, desc in enumerate(["ecfp", "rdkit2d", "chembl"]):
+       for n, desc in enumerate(["ecfp", "rdkitfpbits", "rdkit2d", "chembl"]):
            my_col = the_cols[i]
            pred = preds[(desc, task)]
            my_col.subheader("{0}{1}".format(task[0].upper(), n+1))
@@ -159,7 +201,7 @@ st.header("Property details")
 
 #activity
 st.subheader("Activity prediction")
-st.write("Average score across all predictors (3 classifiers and 3 regressors) +/- standard deviation. Individual scores are detailed in the Activity Predictions row.")
+st.write("Average score across all predictors (4 calibrated classifiers (C) and 4 regressors (R) obtained with different descriptors) +/- standard deviation across estimators. Individual scores are detailed in the Activity Predictions row.")
 st.text("Interpretation: 0 = no activity - 1 = maximum activity")
 
 #Molecular weight
@@ -186,3 +228,13 @@ st.text("Interpretation: 0 = completely different - 1 = very similar to existing
 st.subheader("Retrosynthetic Accessibility (RA) score")
 st.write("Estimation of the synthetic feasibility for the input molecule as determined from the predictions of the computer aided synthesis planning tool AiZynthFinder. Developed by the [Reymond Group](https://github.com/reymond-group/RAscore).")
 st.text("Interpretation: 0 = no synthetic route identified - 1 = synthetic route available")
+
+#SA_score
+st.subheader("Synthetic Accessiblity (SA) score")
+st.write("Estimation of synthetic accessibility score of drug-like molecules based on molecular complexity and fragment contributions.")
+st.text("Interpretation: 1 = easy to synthesize - 10 = difficult to synthesize")
+
+#HBD and HBA
+st.subheader("Hydrogen bond donors (HBD) and acceptors (HBA")
+st.write("Total number of HBD and HBA")
+st.text("Interpretation: HBD + HBA")

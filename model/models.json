@@ -22,5 +22,13 @@
     [
         "rdkit2d",
         "classification"
+    ],
+    [
+        "rdkitfpbits",
+        "regression"
+    ],
+    [
+        "rdkitfpbits",
+        "classification"
     ]
 ]

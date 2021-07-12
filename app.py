@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import onnxruntime as rt
 import json
-import os
+import os, sys
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -14,6 +14,7 @@ from rdkit.Chem.Descriptors import MolLogP
 from rdkit.Chem import Draw
 from rdkit.DataStructs import BulkTanimotoSimilarity
 
+sys.path.append(os.path.dirname(__file__))
 import utils.SA_Score.sascorer as sascorer
 from src.fingerprinter import get_fingerprints, mols_to_fingerprints, ra_fingerprint
 from src.eosdescriptors.chembl import Chembl

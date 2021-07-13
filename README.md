@@ -6,3 +6,4 @@ Simply run:
 ```
 streamlit run app.py
 ```
+Online demo available [here](https://share.streamlit.io/ersilia-os/osm-series4-predictive-model/main/app.py)

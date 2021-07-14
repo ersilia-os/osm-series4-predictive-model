@@ -46,11 +46,18 @@ if mol is not None:
 
 # Closest molecule
 col3.subheader("Closest known S4")
-df = pd.read_csv("data/series4_processed.csv") #get series4 molecules for tanimoto similarity
-s4_smiles = df["smiles"].tolist()
-s4_mols = [Chem.MolFromSmiles(smi) for smi in s4_smiles]
-s4_osm = df["osm"].tolist()
-ref_fps=mols_to_fingerprints(s4_mols)
+
+@st.cache
+def get_s4_mols_to_fingerprints():
+    df = pd.read_csv("data/series4_processed.csv") #get series4 molecules for tanimoto similarity
+    s4_smiles = df["smiles"].tolist()
+    s4_mols = [Chem.MolFromSmiles(smi) for smi in s4_smiles]
+    s4_osm = df["osm"].tolist()
+    ref_fps=mols_to_fingerprints(s4_mols)
+    return s4_smiles, s4_mols, s4_osm, ref_fps
+
+s4_smiles, s4_mols, s4_osm, ref_fps = get_s4_mols_to_fingerprints()
+
 if mol is None:
     pass
 else:
@@ -69,26 +76,41 @@ col1, col2, col3, col4, col5, col6, col7, col8 = st.beta_columns(8)
 col1.subheader("Activity")
 MODELS_DIR = "model"
 
-models_files = {}
-with open(os.path.join(MODELS_DIR, "models.json"), "r") as f:
-    all_models = json.load(f)
-for dn, tn in all_models:
-    models_files[(dn, tn)] = os.path.join(MODELS_DIR, "{0}_{1}.pkl".format(dn, tn))
+@st.cache
+def get_models_files():
+    models_files = {}
+    with open(os.path.join(MODELS_DIR, "models.json"), "r") as f:
+        all_models = json.load(f)
+    for dn, tn in all_models:
+        models_files[(dn, tn)] = os.path.join(MODELS_DIR, "{0}_{1}.pkl".format(dn, tn))
+    return all_models, models_files
 
-sessions = {}
-for k, v in models_files.items():
-    sess = joblib.load(v)
-    sessions[k] = sess
+all_models, models_files = get_models_files()
+
+@st.cache(allow_output_mutation=True)
+def get_sessions():
+    sessions = {}
+    for k, v in models_files.items():
+        sess = joblib.load(v)
+        sessions[k] = sess
+    return sessions
+
+sessions = get_sessions()
 
 necessary_descriptors = sorted(set([k[0] for k in all_models]))
 necessary_tasks = sorted(set([k[1] for k in all_models]))
 
-descriptor_calculators = {
-    "chembl": Chembl(),
-    "ecfp": Ecfp(),
-    "rdkit2d": Rdkit2d(),
-    "rdkitfpbits": RdkitFpBits()
-}
+@st.cache
+def get_descriptor_calculators():
+    descriptor_calculators = {
+        "chembl": Chembl(),
+        "ecfp": Ecfp(),
+        "rdkit2d": Rdkit2d(),
+        "rdkitfpbits": RdkitFpBits()
+    }
+    return descriptor_calculators
+
+descriptor_calculators = get_descriptor_calculators()
 
 def one_prediction(mol):
     preds = {}
@@ -150,12 +172,18 @@ else:
 col5.write("{0:.2f}".format(tan))
 
 col6.subheader("RA score")
+
+@st.cache
+def get_rascore_inference_session():
+    sess = rt.InferenceSession("model/ra_model.onnx")
+    return sess
+
 if mol is None:
     ra=0
 else:
     ra_fp=ra_fingerprint(mol)
     ra_fp = np.array([ra_fp], dtype=np.float32)
-    sess = rt.InferenceSession("model/ra_model.onnx")
+    sess = get_rascore_inference_session()
     input_name = sess.get_inputs()[0].name
     label_name = sess.get_outputs()[1].name
     ra = sess.run([label_name], {input_name: ra_fp})[0][0][1]

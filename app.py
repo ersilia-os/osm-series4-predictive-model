@@ -30,7 +30,7 @@ st.title("OSM series 4 calculator")
 st.write("See [GitHub Repo](https://github.com/ersilia-os/osm-series4-predictive-model) | Check GitHub OSM Issue [#34](https://github.com/OpenSourceMalaria/Series4_PredictiveModel/issues/34) | Learn about [Ersilia Open Source Initiative](https://ersilia.io)")
 
 # First section: molecule input and drawing
-col1, col2, col3 = st.beta_columns(3)
+col1, col2, col3 = st.columns(3)
 # Input
 col1.subheader("Input SMILES")
 smiles = col1.text_input("Input molecule in SMILES format.", value = "BrC(F)Oc1ccc(-c2nnc3cncc(CN4Cc5ccccc5C4)n23)cc1")
@@ -71,7 +71,7 @@ else:
 
 # Second section: prediction of properties
 st.header("Properties")
-col1, col2, col3, col4, col5, col6, col7, col8 = st.beta_columns(8)
+col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
 
 col1.subheader("Activity")
 MODELS_DIR = "model"
@@ -215,7 +215,7 @@ else:
 
 if mol is not None:
     st.header("Activity Predictions")
-    the_cols = st.beta_columns(8)
+    the_cols = st.columns(8)
     i = 0
     for task in ["classification", "regression"]:
        for n, desc in enumerate(["ecfp", "rdkitfpbits", "rdkit2d", "chembl"]):

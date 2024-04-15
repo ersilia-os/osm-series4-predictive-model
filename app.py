@@ -47,7 +47,6 @@ if mol is not None:
 # Closest molecule
 col3.subheader("Closest known S4")
 
-@st.cache
 def get_s4_mols_to_fingerprints():
     df = pd.read_csv("data/series4_processed.csv") #get series4 molecules for tanimoto similarity
     s4_smiles = df["smiles"].tolist()
@@ -76,7 +75,6 @@ col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
 col1.subheader("Activity")
 MODELS_DIR = "model"
 
-@st.cache
 def get_models_files():
     models_files = {}
     with open(os.path.join(MODELS_DIR, "models.json"), "r") as f:
@@ -87,7 +85,6 @@ def get_models_files():
 
 all_models, models_files = get_models_files()
 
-@st.cache(allow_output_mutation=True)
 def get_sessions():
     sessions = {}
     for k, v in models_files.items():
@@ -100,7 +97,6 @@ sessions = get_sessions()
 necessary_descriptors = sorted(set([k[0] for k in all_models]))
 necessary_tasks = sorted(set([k[1] for k in all_models]))
 
-@st.cache
 def get_descriptor_calculators():
     descriptor_calculators = {
         "chembl": Chembl(),
@@ -173,7 +169,6 @@ col5.write("{0:.2f}".format(tan))
 
 col6.subheader("RA score")
 
-@st.cache
 def get_rascore_inference_session():
     sess = rt.InferenceSession("model/ra_model.onnx")
     return sess
